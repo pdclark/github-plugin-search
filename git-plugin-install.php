@@ -109,7 +109,7 @@ class Storm_Git_Plugin_Install {
 	 * @return object $response the plugin info
 	 */
 	public function plugins_api( $false, $action, $args ) {
-		if ( 'query_plugins' != $action && 'install-plugin' != @$_GET['action'] ) {
+		if ( 'install-plugin' != @$_GET['action'] ) {
 			return false;
 		}
 
@@ -131,7 +131,7 @@ class Storm_Git_Plugin_Install {
 		$args->sections = array( 'description' => $plugin->description );
 		$args->download_link = $plugin->zip_url;
 
-		return $response;
+		return $args;
 	}
 
 
