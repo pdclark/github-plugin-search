@@ -17,11 +17,10 @@ class Storm_Git_Plugin_Search {
 	}
 
 	public function plugins_api_result( $res, $action, $args ) {
-		
 		$github_query = $args->search . $this->git_query_default;
 		$github_query = add_query_arg( 'q', $github_query, $this->git_base_url );
 
-		$github_query = add_query_arg( array( 'page'=>1, 'per_page'=>20 ), $github_query );
+		$github_query = add_query_arg( array( 'page'=>$res->info['page'], 'per_page'=>20 ), $github_query );
 
 		$http_request_args = apply_filters( 'git_http_request_args', array(
 			'headers' => array(
@@ -49,6 +48,11 @@ class Storm_Git_Plugin_Search {
 		$plugins = array();
 
 		foreach ( (array) $json->items as $plugin ) {
+			// Skip found files that aren't in the root of their repository
+			if ( false !== strpos( $plugin->path, '/' ) ) {
+				continue;
+			}
+
 			$tmp = new StdClass;
 
 			$tmp->name              = $plugin->repository->name;
