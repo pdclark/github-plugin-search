@@ -1,36 +1,4 @@
 <?php
-/*
-Plugin Name: Git Plugin Search
-Plugin URI: http://github.com/brainstormmedia/git-plugin-search
-Description: Search and updates plugins from Github
-Version: 1.0
-Author: Brainstorm Media
-Author URI: http://brainstormmedia.com/
-*/
-
-/**
- * Copyright (c) 2013 Brainstorm Media. All rights reserved.
- *
- * Released under the GPL license
- * http://www.opensource.org/licenses/gpl-license.php
- *
- * This is an add-on for WordPress
- * http://wordpress.org/
- *
- * **********************************************************************
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- * **********************************************************************
- */
-
-add_action( 'init', create_function( '', 'new Storm_Git_Plugin_Search();' ) );
 
 class Storm_Git_Plugin_Search {
 
@@ -50,15 +18,17 @@ class Storm_Git_Plugin_Search {
 
 	public function plugins_api_result( $res, $action, $args ) {
 		
-		$github_query = urlencode( $args->search . $this->git_query_default );
+		$github_query = $args->search . $this->git_query_default;
 		$github_query = add_query_arg( 'q', $github_query, $this->git_base_url );
 
-		$http_request_args = array(
+		$github_query = add_query_arg( array( 'page'=>1, 'per_page'=>20 ), $github_query );
+
+		$http_request_args = apply_filters( 'git_http_request_args', array(
 			'headers' => array(
 				// Enable Github search API preview
 				'Accept' => 'application/vnd.github.preview.text-match+json',
 			),
-		);
+		));
 
 		$response = wp_remote_get( $github_query, $http_request_args );
 
@@ -78,7 +48,7 @@ class Storm_Git_Plugin_Search {
 	public function map_git_repos_to_wp_plugins( $json ) {
 		$plugins = array();
 
-		foreach ( $json->items as $plugin ) {
+		foreach ( (array) $json->items as $plugin ) {
 			$tmp = new StdClass;
 
 			$tmp->name              = $plugin->repository->name;
