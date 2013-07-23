@@ -20,13 +20,13 @@ class Storm_Git_Plugin_Install {
 		$this->ssl_verify = apply_filters('git_sslverify', $this->ssl_verify);
 
 		// Check for update from Git API
-		add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'api_check' ) );
+		// add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'api_check' ) );
 
 		// Plugin details screen
-		add_filter( 'plugins_api', array( $this, 'get_plugin_info' ), 10, 3 );
+		add_filter( 'plugins_api', array( $this, 'plugins_api' ), 10, 3 );
 
 		// Cleanup and activate plugins after update
-		add_filter( 'upgrader_post_install', array( $this, 'upgrader_post_install' ), 10, 3 );
+		// add_filter( 'upgrader_post_install', array( $this, 'upgrader_post_install' ), 10, 3 );
 
 		// HTTP Timeout
 		add_filter( 'http_request_timeout', array( $this, 'http_request_timeout' ) );
@@ -108,28 +108,28 @@ class Storm_Git_Plugin_Install {
 	 * @param object $args plugin arguments
 	 * @return object $response the plugin info
 	 */
-	public function get_plugin_info( $false, $action, $response ) {
-		if ( 'install-plugin' != @$_GET['action'] ) {
-			return $response;
+	public function plugins_api( $false, $action, $args ) {
+		if ( 'query_plugins' != $action && 'install-plugin' != @$_GET['action'] ) {
+			return false;
 		}
 
-		$plugin = $this->get_repo_transport( $response->slug );
+		$plugin = $this->get_repo_transport( $args->slug );
 
 		if ( !$plugin ) {
-			return $response;
+			return false;
 		}
 
-		$response->slug = $plugin->slug;
-		$response->plugin_name  = $plugin->name;
-		$response->version = $plugin->new_version;
-		$response->author = $plugin->author;
-		$response->homepage = $plugin->homepage;
-		$response->requires = $plugin->requires;
-		$response->tested = $plugin->tested;
-		$response->downloaded   = 0;
-		$response->last_updated = $plugin->last_updated;
-		$response->sections = array( 'description' => $plugin->description );
-		$response->download_link = $plugin->zip_url;
+		$args->slug = $plugin->slug;
+		$args->plugin_name  = $plugin->name;
+		$args->version = $plugin->new_version;
+		$args->author = $plugin->author;
+		$args->homepage = $plugin->homepage;
+		$args->requires = $plugin->requires;
+		$args->tested = $plugin->tested;
+		$args->downloaded   = 0;
+		$args->last_updated = $plugin->last_updated;
+		$args->sections = array( 'description' => $plugin->description );
+		$args->download_link = $plugin->zip_url;
 
 		return $response;
 	}
