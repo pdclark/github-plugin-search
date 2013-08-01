@@ -20,13 +20,14 @@ class Storm_Git_Plugin_Search {
 		$github_query = $args->search . $this->git_query_default;
 		$github_query = add_query_arg( 'q', $github_query, $this->git_base_url );
 
-		$github_query = add_query_arg( array( 'page'=>$res->info['page'], 'per_page'=>20 ), $github_query );
+		$github_query = add_query_arg( array( 'page'=>$res->info['page'], 'per_page'=>50 ), $github_query );
 
 		$http_request_args = apply_filters( 'git_http_request_args', array(
 			'headers' => array(
 				// Enable Github search API preview
 				'Accept' => 'application/vnd.github.preview.text-match+json',
 			),
+			'timeout' => 10,
 		));
 
 		$response = wp_remote_get( $github_query, $http_request_args );
