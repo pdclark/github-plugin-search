@@ -13,7 +13,7 @@ class Storm_Git_Plugin_Search {
 	var $git_query_default = ' "Plugin Name:" "Description:" "Plugin URI:" language:php in:file';
 
 	public function __construct() {
-		add_filter( 'plugins_api_result', array( $this, 'plugins_api_result' ), 10, 3 );  
+		add_filter( 'plugins_api_result', array( $this, 'plugins_api_result' ), 10, 3 );
 	}
 
 	public function plugins_api_result( $res, $action, $args ) {
@@ -27,6 +27,7 @@ class Storm_Git_Plugin_Search {
 				// Enable Github search API preview
 				'Accept' => 'application/vnd.github.preview.text-match+json',
 			),
+			'sslverify' => false
 		));
 
 		$response = wp_remote_get( $github_query, $http_request_args );
