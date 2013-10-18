@@ -3,19 +3,31 @@
 class Storm_Git_Plugin_Search {
 
 	/**
-	 * URL for the Github search API
+	 * @var string URL for the Github search API
 	 */
 	var $git_base_url = 'https://api.github.com/search/code';
 
 	/**
-	 * Defaults for a search targeting WordPress plugins
+	 * @var string Defaults for a search targeting WordPress plugins
 	 */
 	var $git_query_default = ' "Plugin Name:" "Description:" "Plugin URI:" language:php in:file';
 
+	/**
+	 * Instantiate the class. Add hooks.
+	 */
 	public function __construct() {
 		add_filter( 'plugins_api_result', array( $this, 'plugins_api_result' ), 10, 3 );
 	}
 
+	/**
+	 * Filter WordPress plugins API search result
+	 * 
+	 * @param object|WP_Error  $res    Response object or WP_Error.
+	 * @param string           $action The type of information being requested from the Plugin Install API.
+	 * @param object           $args   Plugin API arguments.
+	 * 
+	 * @return object|WP_Error $res    Response object or WP_Error.
+	 */
 	public function plugins_api_result( $res, $action, $args ) {
 		$github_query = $args->search . $this->git_query_default;
 		$github_query = add_query_arg( 'q', $github_query, $this->git_base_url );
@@ -46,6 +58,13 @@ class Storm_Git_Plugin_Search {
 		return $res;
 	}
 
+	/**
+	 * Convert Github API JSON to WordPress plugin API format.
+	 * 
+	 * @param object $json Github API JSON response
+	 * 
+	 * @return array $plugins Plugins array corresponding to $resource->plugins in WordPress search response object.
+	 */
 	public function map_git_repos_to_wp_plugins( $json ) {
 		$plugins = array();
 
