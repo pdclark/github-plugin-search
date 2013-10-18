@@ -39,22 +39,20 @@ class Storm_Git_Plugin_Search {
 	/**
 	 * Filter WordPress plugins API search result
 	 * 
-	 * @param object|WP_Error  $res    Response object or WP_Error.
+	 * @param object|WP_Error  $wp_response    Response object or WP_Error.
 	 * @param string           $action The type of information being requested from the Plugin Install API.
 	 * @param object           $args   Plugin API arguments.
 	 * 
-	 * @return object|WP_Error $res    Response object or WP_Error.
+	 * @return object|WP_Error $wp_response    Response object or WP_Error.
 	 */
-	public function plugins_api_result( $res, $action, $args ) {
-		$response = $this->search_github_code( $args );
+	public function plugins_api_result( $wp_response, $action, $args ) {
+		$git_response = $this->search_github_code( $args );
 
-		if ( is_a( $response, 'WP_Error') ) { return $response; }
+		if ( is_a( $git_response, 'WP_Error') ) { return $git_response; }
 
-		$git_plugins = $this->map_git_repos_to_wp_plugins( $response );
+		$wp_response = $this->map_git_response_to_wp_response( $git_response );
 
-		$res->plugins = $git_plugins;
-
-		return $res;
+		return $wp_response;
 	}
 
 	/**
@@ -182,14 +180,20 @@ class Storm_Git_Plugin_Search {
 	/**
 	 * Convert Github API JSON to WordPress plugin API format.
 	 * 
-	 * @param object $response Github API JSON response
-	 * 
+	 * @param object $git_response Github API JSON response
 	 * @return array $plugins Plugins array corresponding to $resource->plugins in WordPress search response object.
 	 */
-	public function map_git_repos_to_wp_plugins( $response ) {
+	public function map_git_response_to_wp_response( $git_response ) {
 		$plugins = array();
 
-		foreach ( (array) $response->items as $plugin ) {
+		$wp_response = new stdClass();
+
+		// Update total item count
+		// Todo: Figure out why this doesn't effect paging
+		$wp_response->info = array( 'results' => $git_response->total_count, 'page' => 1, 'pages' => 1, );
+
+		// Build plugin list
+		foreach ( (array) $git_response->items as $plugin ) {
 			$tmp = new StdClass;
 
 			$tmp->name              = $plugin->repository->name;
@@ -212,7 +216,9 @@ class Storm_Git_Plugin_Search {
 			$plugins[] = $tmp;
 		}
 
-		return $plugins;
+		$wp_response->plugins = $plugins;
+
+		return $wp_response;
 	}
 
 }
