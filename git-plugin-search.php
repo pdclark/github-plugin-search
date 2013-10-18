@@ -46,13 +46,11 @@ class Storm_Git_Plugin_Search {
 	 * @return object|WP_Error $res    Response object or WP_Error.
 	 */
 	public function plugins_api_result( $res, $action, $args ) {
-		$files = $this->search_github_code( $args );
+		$response = $this->search_github_code( $args );
 
-		if ( is_a( $files, 'WP_Error') ) { return $files; }
+		if ( is_a( $response, 'WP_Error') ) { return $response; }
 
-		$git_plugins = $this->map_git_repos_to_wp_plugins( $files );
-
-		FB::log($git_plugins, '$git_plugins');
+		$git_plugins = $this->map_git_repos_to_wp_plugins( $response );
 
 		$res->plugins = $git_plugins;
 
@@ -73,9 +71,9 @@ class Storm_Git_Plugin_Search {
 	public function search_github_code( $args ) {
 		$transient_key = 'git-search-code' . md5( $args->search );
 
-		$files = get_transient( $transient_key );
+		$response = get_transient( $transient_key );
 
-		if ( false === $files ) {
+		if ( false === $response ) {
 			// No cache -- query the Github API
 
 			$search_string = $args->search . $this->search_code . $this->search_github_users( $args );
@@ -89,13 +87,15 @@ class Storm_Git_Plugin_Search {
 				return $res;
 			}
 
-			$files = json_decode( $response['body'] );
+			$response = json_decode( $response['body'] );
 
-			set_transient( $transient_key, $files );
+			$response = $this->filter_repos_that_are_not_plugins( $response );
+
+			set_transient( $transient_key, $response );
 
 		}
 
-		return $files;
+		return $response;
 	}
 
 	/**
@@ -157,21 +157,39 @@ class Storm_Git_Plugin_Search {
 	}
 
 	/**
+	 * @param object $response Github API JSON response
+	 * @return object $response Filtered Github JSON response
+	 */
+	public function filter_repos_that_are_not_plugins( $response ) {
+		if ( !is_object( $response ) || !is_array( $response->items ) ) {
+			return false;
+		}
+
+		foreach ( (array) $response->items as $key => $plugin ) {
+
+			// Skip found plugins that aren't in the root of their repository
+			if ( false !== strpos( $plugin->path, '/' ) ) {
+				unset( $response->items[ $key ] );
+			}
+
+		}
+
+		$response->total_count = count( $response->items );
+
+		return $response;
+	}
+
+	/**
 	 * Convert Github API JSON to WordPress plugin API format.
 	 * 
-	 * @param object $files Github API JSON response
+	 * @param object $response Github API JSON response
 	 * 
 	 * @return array $plugins Plugins array corresponding to $resource->plugins in WordPress search response object.
 	 */
-	public function map_git_repos_to_wp_plugins( $files ) {
+	public function map_git_repos_to_wp_plugins( $response ) {
 		$plugins = array();
 
-		foreach ( (array) $files->items as $plugin ) {
-			// Skip found files that aren't in the root of their repository
-			if ( false !== strpos( $plugin->path, '/' ) ) {
-				continue;
-			}
-
+		foreach ( (array) $response->items as $plugin ) {
 			$tmp = new StdClass;
 
 			$tmp->name              = $plugin->repository->name;
