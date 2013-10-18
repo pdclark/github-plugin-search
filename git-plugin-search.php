@@ -5,12 +5,29 @@ class Storm_Git_Plugin_Search {
 	/**
 	 * @var string URL for the Github search API
 	 */
-	var $git_base_url = 'https://api.github.com/search/code';
+	var $git_base_url = 'https://api.github.com/search/';
 
 	/**
-	 * @var string Defaults for a search targeting WordPress plugins
+	 * @var string Defaults for a search targeting WordPress plugin repos
 	 */
-	var $git_query_default = ' "Plugin Name:" "Description:" "Plugin URI:" language:php in:file';
+	var $search_users = ' wordpress plugin';
+
+	/**
+	 * @var string Defaults for a search targeting WordPress plugin files
+	 */
+	var $search_code = ' "Plugin Name:" "Description:" "Plugin URI:" language:php in:file';
+
+	/**
+	 * @var array Settings for the Github request. Filter with git_http_request_args.
+	 */
+	var $git_request_args = array(
+		'headers' => array(
+			// Enable Github search API preview
+			'Accept' => 'application/vnd.github.preview.text-match+json',
+		),
+		'timeout' => 10,
+		'sslverify' => false,
+	);
 
 	/**
 	 * Instantiate the class. Add hooks.
@@ -29,29 +46,13 @@ class Storm_Git_Plugin_Search {
 	 * @return object|WP_Error $res    Response object or WP_Error.
 	 */
 	public function plugins_api_result( $res, $action, $args ) {
-		$github_query = $args->search . $this->git_query_default;
-		$github_query = add_query_arg( 'q', $github_query, $this->git_base_url );
+		$files = $this->search_github_code( $args );
 
-		$github_query = add_query_arg( array( 'page'=>$res->info['page'], 'per_page'=>50 ), $github_query );
+		if ( is_a( $files, 'WP_Error') ) { return $files; }
 
-		$http_request_args = apply_filters( 'git_http_request_args', array(
-			'headers' => array(
-				// Enable Github search API preview
-				'Accept' => 'application/vnd.github.preview.text-match+json',
-			),
-			'timeout' => 10,
-			'sslverify' => false,
-		));
+		$git_plugins = $this->map_git_repos_to_wp_plugins( $files );
 
-		$response = wp_remote_get( $github_query, $http_request_args );
-
-		if ( is_a( $response, 'WP_Error') ) {
-			return $res;
-		}
-
-		$json = json_decode( $response['body'] );
-
-		$git_plugins = $this->map_git_repos_to_wp_plugins( $json, $response, $res );
+		FB::log($git_plugins, '$git_plugins');
 
 		$res->plugins = $git_plugins;
 
@@ -59,16 +60,113 @@ class Storm_Git_Plugin_Search {
 	}
 
 	/**
+	 * Search Github for the query.
+	 * 
+	 * Searches all repos for "wordpress plugin" first,
+	 * then searches files in those repos.
+	 * 
+	 * This roundabout method is necessary because the
+	 * Github API doesn't allow global code search.
+	 *
+	 *  @param object $args WordPress Plugin API arguments.
+	 */
+	public function search_github_code( $args ) {
+		$transient_key = 'git-search-code' . md5( $args->search );
+
+		$files = get_transient( $transient_key );
+
+		if ( false === $files ) {
+			// No cache -- query the Github API
+
+			$search_string = $args->search . $this->search_code . $this->search_github_users( $args );
+
+			$github_query = add_query_arg( 'q', $search_string, $this->git_base_url . 'code' );
+			$github_query = add_query_arg( 'per_page', 1000, $github_query );
+
+			$response = wp_remote_get( $github_query, apply_filters( 'git_http_request_args', $this->git_request_args ) );
+
+			if ( is_a( $response, 'WP_Error') ) {
+				return $res;
+			}
+
+			$files = json_decode( $response['body'] );
+
+			set_transient( $transient_key, $files );
+
+		}
+
+		return $files;
+	}
+
+	/**
+	 * Search all github repos that mention "WordPress plugin" in the title or description
+	 * 
+	 * @param object $args WordPress Plugin API arguments.
+	 */
+	public function search_github_users( $args ) {
+		$transient_key = 'git-search-users' . md5( $args->search );
+
+		$users = get_transient( $transient_key );
+
+		if ( false === $users ) {
+			// No cache -- query the Github API
+
+			$search_string = $args->search . $this->search_users;
+
+			$github_query = add_query_arg( 'q', $search_string, $this->git_base_url . 'repositories' );
+			$github_query = add_query_arg( 'per_page', 1000, $github_query );
+
+			$response = wp_remote_get( $github_query, apply_filters( 'git_http_request_args', $this->git_request_args ) );
+
+			if ( is_a( $response, 'WP_Error') ) {
+				return $res;
+			}
+
+			$users = $this->extract_github_usernames( $response );
+
+			set_transient( $transient_key, $users );
+		}
+
+		return $users;
+	}
+
+	/**
+	 * Extract array of users from Github API response
+	 * 
+	 * @param $response WP_HTTP response. Body contains Github API JSON.
+	 * @return string List of Github usernames
+	 */
+	public function extract_github_usernames( $response ) {
+		$response = json_decode( $response['body'] );
+
+		if ( !is_object( $response ) || !is_array( $response->items ) ) {
+			return false;
+		}
+
+		$users = array();
+		foreach( $response->items as $item ) {
+			$users[] = $item->owner->login;
+		}
+
+		$users = array_unique( $users );
+
+		// Convert list of usernames to @username format for search string
+		$users = ' @' . implode( ' @', $users );
+
+		return $users;
+	}
+
+	/**
 	 * Convert Github API JSON to WordPress plugin API format.
 	 * 
-	 * @param object $json Github API JSON response
+	 * @param object $files Github API JSON response
 	 * 
 	 * @return array $plugins Plugins array corresponding to $resource->plugins in WordPress search response object.
 	 */
-	public function map_git_repos_to_wp_plugins( $json ) {
+	public function map_git_repos_to_wp_plugins( $files ) {
 		$plugins = array();
 
-		foreach ( (array) $json->items as $plugin ) {
+		foreach ( (array) $files->items as $plugin ) {
 			// Skip found files that aren't in the root of their repository
 			if ( false !== strpos( $plugin->path, '/' ) ) {
 				continue;
