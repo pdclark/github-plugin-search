@@ -23,7 +23,7 @@ class Storm_Git_Plugin_Install {
 		// add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'api_check' ) );
 
 		// Plugin details screen
-		add_filter( 'plugins_api', array( $this, 'plugins_api' ), 10, 3 );
+		add_filter( 'plugins_api', array( $this, 'plugins_api' ), 99, 3 );
 
 		// Cleanup and activate plugins after update
 		// add_filter( 'upgrader_post_install', array( $this, 'upgrader_post_install' ), 10, 3 );
