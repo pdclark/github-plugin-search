@@ -46,13 +46,18 @@ class Storm_Git_Plugin_Search {
 	 * @return object|WP_Error $wp_response    Response object or WP_Error.
 	 */
 	public function plugins_api_result( $wp_response, $action, $args ) {
+		// Prevent filter from effecting installs & upgrades
+		if ( 'query_plugins' !== $action ) {
+			return $wp_response;
+		}
+
 		$git_response = $this->search_github_code( $args );
 
 		if ( is_a( $git_response, 'WP_Error') ) { return $git_response; }
 
-		$wp_response = $this->map_git_response_to_wp_response( $git_response );
+		$git_response = $this->map_git_response_to_wp_response( $git_response );
 
-		return $wp_response;
+		return $git_response;
 	}
 
 	/**
