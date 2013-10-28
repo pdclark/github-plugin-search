@@ -34,6 +34,19 @@ class Storm_Git_Plugin_Search {
 	 */
 	public function __construct() {
 		add_filter( 'plugins_api_result', array( $this, 'plugins_api_result' ), 10, 3 );
+		
+		add_filter( 'git_http_request_args', array( $this, 'maybe_authenticate_http' ) );
+	}
+
+	public function maybe_authenticate_http( $args ) {
+		$username = apply_filters( 'git_plugins_api_username', false );
+		$password = apply_filters( 'git_plugins_api_password', false );
+
+		if ( $username && $password ) {
+			$args['headers']['Authorization'] = 'Basic ' . base64_encode( "$username:$password" );
+		}
+
+		return $args;
 	}
 
 	/**
