@@ -8,16 +8,6 @@ class Storm_Git_Plugin_Search {
 	var $git_base_url = 'https://api.github.com/search/';
 
 	/**
-	 * @var string Defaults for a search targeting WordPress plugin repos
-	 */
-	var $search_users = ' wordpress plugin';
-
-	/**
-	 * @var string Defaults for a search targeting WordPress plugin files
-	 */
-	var $search_code = ' "Plugin Name:" "Description:" "Plugin URI:" language:php in:file';
-
-	/**
 	 * @var array Settings for the Github request. Filter with git_http_request_args.
 	 */
 	var $git_request_args = array(
@@ -34,7 +24,7 @@ class Storm_Git_Plugin_Search {
 	 */
 	public function __construct() {
 		add_filter( 'plugins_api_result', array( $this, 'plugins_api_result' ), 10, 3 );
-		
+
 		add_filter( 'git_http_request_args', array( $this, 'maybe_authenticate_http' ) );
 	}
 
@@ -64,9 +54,11 @@ class Storm_Git_Plugin_Search {
 			return $wp_response;
 		}
 
-		$git_response = $this->search_github_code( $args );
+		$git_response = $this->search( $args );
 
-		if ( is_a( $git_response, 'WP_Error') ) { return $git_response; }
+		if ( is_a( $git_response, 'WP_Error') || false === $git_response ) {
+			return $git_response;
+		}
 
 		$git_response = $this->map_git_response_to_wp_response( $git_response );
 
@@ -74,9 +66,7 @@ class Storm_Git_Plugin_Search {
 	}
 
 	/**
-	 * Search Github for the query.
-	 * 
-	 * Searches all repos for "wordpress plugin" first,
+	 * Search all repos for "wordpress plugin" first,
 	 * then searches files in those repos.
 	 * 
 	 * This roundabout method is necessary because the
@@ -84,32 +74,58 @@ class Storm_Git_Plugin_Search {
 	 *
 	 *  @param object $args WordPress Plugin API arguments.
 	 */
-	public function search_github_code( $args ) {
-		$transient_key = 'git-search-code' . md5( $args->search );
+	public function search( $args ) {
+		// Get all repositories that match the raw search string
+		$repo_response = $this->search_repositories( $args );
+
+		$plugin_response = false;
+
+		// Get all WordPress plugins within that set of repos
+		if ( 0 < $repo_response->total_count ) {
+
+			$repo_names = '@' . implode(' @', wp_list_pluck( $repo_response->items, 'full_name' ) );
+
+			$plugin_response = $this->search_plugins( $repo_names );
+
+			if ( class_exists( 'FB') ) { FB::log($plugin_response, '$plugin_response'); }
+		}
+
+		return $plugin_response;
+	}
+
+	/**
+	 * Search Github for the query.
+	 */
+	public function search_query( $search_string, $search_type = 'repo' ) {
+		$transient_key = 'gp-' . $search_type . md5( $search_string );
 
 		$response = get_transient( $transient_key );
 
 		if ( false === $response ) {
-			// No cache -- query the Github API
 
-			$search_string = $args->search . $this->search_code . $this->search_github_users( $args );
+			// No cache available
+			if ( 'repo' == $search_type ) { $search_type = 'repositories'; }
+			$search_string = str_replace( ' ', '+', $search_string );
 
-			$github_query = add_query_arg( 'q', $search_string, $this->git_base_url . 'code' );
+			$github_query = add_query_arg( 'q', $search_string, $this->git_base_url . $search_type );
 			$github_query = add_query_arg( 'per_page', 1000, $github_query );
 
+			// Query the Github API
 			$response = wp_remote_get( $github_query, apply_filters( 'git_http_request_args', $this->git_request_args ) );
 
 			if ( is_a( $response, 'WP_Error') ) {
-				return $res;
+				return $response;
 			}
+
+			if ( class_exists('FB') ) { FB::log( $response['headers']['x-ratelimit-remaining'], 'remaining' ); }
 
 			$response = json_decode( $response['body'] );
 
-			$response = $this->filter_repos_that_are_not_plugins( $response );
-
+			// Cache the response
 			set_transient( $transient_key, $response );
 
 		}
+
 
 		return $response;
 	}
@@ -119,57 +135,29 @@ class Storm_Git_Plugin_Search {
 	 * 
 	 * @param object $args WordPress Plugin API arguments.
 	 */
-	public function search_github_users( $args ) {
-		$transient_key = 'git-search-users' . md5( $args->search );
+	public function search_repositories( $args ) {
+		$search_string = $args->search . ' in:name,description,readme fork:false';
 
-		$users = get_transient( $transient_key );
+		$response = $this->search_query( $search_string, 'repo' );
 
-		if ( false === $users ) {
-			// No cache -- query the Github API
-
-			$search_string = $args->search . $this->search_users;
-
-			$github_query = add_query_arg( 'q', $search_string, $this->git_base_url . 'repositories' );
-			$github_query = add_query_arg( 'per_page', 1000, $github_query );
-
-			$response = wp_remote_get( $github_query, apply_filters( 'git_http_request_args', $this->git_request_args ) );
-
-			if ( is_a( $response, 'WP_Error') ) {
-				return $res;
-			}
-
-			$users = $this->extract_github_usernames( $response );
-
-			set_transient( $transient_key, $users );
-		}
-
-		return $users;
+		return $response;
 	}
 
 	/**
-	 * Extract array of users from Github API response
+	 * Search given repositories for files that contain WordPress plugin headers
 	 * 
-	 * @param $response WP_HTTP response. Body contains Github API JSON.
-	 * @return string List of Github usernames
+	 * @param $repos string List of repo names in format @username/repo
 	 */
-	public function extract_github_usernames( $response ) {
-		$response = json_decode( $response['body'] );
+	public function search_plugins( $repos ) {
+		// Github search queries all words individually whether we use quotes or not.
+		// e.g., "Plugin Description" is the same as Plugin Description
+		$search_string = 'plugin name extension:php in:file ' . $repos;
 
-		if ( !is_object( $response ) || !is_array( $response->items ) ) {
-			return false;
-		}
+		$response = $this->search_query( $search_string, 'code' );
 
-		$users = array();
-		foreach( $response->items as $item ) {
-			$users[] = $item->owner->login;
-		}
+		$response = $this->filter_repos_that_are_not_plugins( $response );
 
-		$users = array_unique( $users );
-
-		// Convert list of usernames to @username format for search string
-		$users = ' @' . implode( ' @', $users );
-
-		return $users;
+		return $response;
 	}
 
 	/**
@@ -183,11 +171,21 @@ class Storm_Git_Plugin_Search {
 
 		foreach ( (array) $response->items as $key => $plugin ) {
 
-			// Skip found plugins that aren't in the root of their repository
+			// Remove if file not in repository root
 			if ( false !== strpos( $plugin->path, '/' ) ) {
 				unset( $response->items[ $key ] );
 			}
 
+			// Check first text fragment for WordPress plugin header
+			$fragment = $plugin->text_matches[0]->fragment;
+			if (
+				false === strpos( $fragment, '<?php')
+				|| false === strpos( $fragment, '/*')
+				|| false === strpos( $fragment, 'Plugin Name:') // consider making case-insensitive
+				|| false === strpos( $fragment, 'Plugin URI:') // consider making case-insensitive
+			) {
+				unset( $response->items[ $key ] );
+			}
 		}
 
 		$response->total_count = count( $response->items );
