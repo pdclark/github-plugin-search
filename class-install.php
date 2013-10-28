@@ -1,6 +1,6 @@
 <?php
 
-class Storm_Git_Plugin_Install {
+class GHPS_Install {
 
 	/**
 	 *	Whether to verify SSL for Git-related connections

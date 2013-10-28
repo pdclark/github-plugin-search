@@ -1,6 +1,6 @@
 <?php
 
-class Storm_Git_Plugin_Search {
+class GHPS_Search {
 
 	/**
 	 * @var string URL for the Github search API
@@ -29,8 +29,10 @@ class Storm_Git_Plugin_Search {
 	}
 
 	public function maybe_authenticate_http( $args ) {
-		$username = apply_filters( 'git_plugins_api_username', false );
-		$password = apply_filters( 'git_plugins_api_password', false );
+		$plugin = GHPS_Controller::get_instance();
+
+		$username = $plugin->get_option( 'username' );
+		$password = $plugin->get_option( 'password' );
 
 		if ( $username && $password ) {
 			$args['headers']['Authorization'] = 'Basic ' . base64_encode( "$username:$password" );

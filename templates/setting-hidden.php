@@ -1,0 +1,1 @@
+<input class="regular-text <?php echo $class ?>" type="hidden" id="<?php echo $id ?>" name="<?php echo $this->option_key . "[$id]" ?>" value="<?php esc_attr_e( $options[$id] ) ?>" />
