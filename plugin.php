@@ -86,10 +86,10 @@ function storm_github_plugin_search_init() {
 
 	if ( is_admin() ) {
 
-		require_once dirname( __FILE__ ) . '/class-controller.php';
-		require_once dirname( __FILE__ ) . '/class-admin.php';
-		require_once dirname( __FILE__ ) . '/class-search.php';
-		require_once dirname( __FILE__ ) . '/class-install.php';
+		require_once dirname( __FILE__ ) . '/includes/class-controller.php';
+		require_once dirname( __FILE__ ) . '/includes/class-admin.php';
+		require_once dirname( __FILE__ ) . '/includes/class-search.php';
+		require_once dirname( __FILE__ ) . '/includes/class-install.php';
 		
 		GHPS_Controller::get_instance();
 
