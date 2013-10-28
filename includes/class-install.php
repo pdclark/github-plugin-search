@@ -3,10 +3,10 @@
 class GHPS_Install {
 
 	/**
-	 *	Whether to verify SSL for Git-related connections
-	 * Override with <code> add_filter('git_sslverify', create_function('', 'return false;') ); </code>
+	 * Whether to verify SSL for Git-related connections
+	 * Override with <code> add_filter('git_sslverify', '__return_true' ); </code>
 	 */
-	var $ssl_verify = true;
+	var $ssl_verify = false;
 
 	/**
 	 * Class Constructor
