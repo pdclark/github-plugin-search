@@ -85,7 +85,10 @@ class GHPS_Search {
 		// Get all WordPress plugins within that set of repos
 		if ( 0 < $repo_response->total_count ) {
 
-			$repo_names = '@' . implode(' @', wp_list_pluck( $repo_response->items, 'full_name' ) );
+			// Limit repos put in query to avoid API server error
+			$repo_limit = 50;
+			$repo_names = array_slice( wp_list_pluck( $repo_response->items, 'full_name' ), 0, $repo_limit );
+			$repo_names = '@' . implode(' @', $repo_names );
 
 			$plugin_response = $this->search_plugins( $repo_names );
 
@@ -119,7 +122,8 @@ class GHPS_Search {
 				return $response;
 			}
 
-			if ( class_exists('FB') ) { FB::log( $response['headers']['x-ratelimit-remaining'], 'remaining' ); }
+			if ( class_exists('FB') ) { FB::log( $response['headers'], 'headers' ); }
+			if ( class_exists('FB') ) { FB::log( $response['headers']['x-ratelimit-remaining'], 'rate-limit-remaining' ); }
 
 			$response = json_decode( $response['body'] );
 
@@ -128,6 +132,7 @@ class GHPS_Search {
 
 		}
 
+		if ( class_exists('FB') ) { FB::log($response, '$response'); }
 
 		return $response;
 	}
@@ -138,7 +143,7 @@ class GHPS_Search {
 	 * @param object $args WordPress Plugin API arguments.
 	 */
 	public function search_repositories( $args ) {
-		$search_string = $args->search . ' in:name,description,readme fork:false';
+		$search_string = $args->search . ' wordpress in:name,description,readme fork:false';
 
 		$response = $this->search_query( $search_string, 'repo' );
 
