@@ -1,0 +1,1 @@
+Read about Github Plugin Search and watch a demo video at [WordPress Tavern](http://www.wptavern.com/how-to-install-wordpress-plugins-directly-from-github).
