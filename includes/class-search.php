@@ -33,7 +33,7 @@ class GHPS_Search {
 	 * Instantiate the class. Add hooks.
 	 */
 	public function __construct() {
-		add_filter( 'plugins_api', array( $this, 'plugins_api' ), 10, 3 );
+		add_filter( 'plugins_api', array( $this, 'plugins_api' ), 20, 3 );
 
 		add_filter( 'ghps_http_request_args', array( $this, 'maybe_authenticate_http' ) );
 	}

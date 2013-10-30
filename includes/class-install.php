@@ -113,7 +113,7 @@ class GHPS_Install {
 	 */
 	public function plugins_api( $false, $action, $args ) {
 		if ( 'install-plugin' != @$_GET['action'] ) {
-			return false;
+			return $false;
 		}
 
 		$plugin = $this->get_repo_transport( $args->slug );
