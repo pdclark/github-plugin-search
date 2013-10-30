@@ -11,7 +11,7 @@ class GHPS_Search {
 	var $git_base_url = 'https://api.github.com/search/';
 
 	/**
-	 * @var array Settings for the Github request. Filter with git_http_request_args.
+	 * @var array Settings for the Github request. Filter with ghps_http_request_args.
 	 */
 	var $git_request_args = array(
 		'headers' => array(
@@ -23,12 +23,19 @@ class GHPS_Search {
 	);
 
 	/**
+	 * Override with filter 'ghps_minimum_star_count'
+	 * 
+	 * @var int Mininimum number of stars a repo must have to show up in search
+	 **/
+	var $minimum_star_count = 5;
+
+	/**
 	 * Instantiate the class. Add hooks.
 	 */
 	public function __construct() {
 		add_filter( 'plugins_api_result', array( $this, 'plugins_api_result' ), 10, 3 );
 
-		add_filter( 'git_http_request_args', array( $this, 'maybe_authenticate_http' ) );
+		add_filter( 'ghps_http_request_args', array( $this, 'maybe_authenticate_http' ) );
 	}
 
 	public function maybe_authenticate_http( $args ) {
@@ -58,7 +65,7 @@ class GHPS_Search {
 		if ( 'query_plugins' !== $action ) {
 			return $wp_response;
 		}
-
+		FB::log($args, '$args');
 		$git_response = $this->search( $args );
 
 		if ( is_a( $git_response, 'WP_Error') || false === $git_response ) {
@@ -105,6 +112,8 @@ class GHPS_Search {
 	 * Search Github for the query.
 	 */
 	public function search_query( $search_string, $search_type = 'repo' ) {
+		if ( class_exists('FB') ) { FB::log($search_string, '$search_string'); }
+
 		$transient_key = 'gp-' . $search_type . md5( $search_string );
 
 		$response = get_transient( $transient_key );
@@ -119,7 +128,7 @@ class GHPS_Search {
 			$github_query = add_query_arg( 'per_page', 1000, $github_query );
 
 			// Query the Github API
-			$response = wp_remote_get( $github_query, apply_filters( 'git_http_request_args', $this->git_request_args ) );
+			$response = wp_remote_get( $github_query, apply_filters( 'ghps_http_request_args', $this->git_request_args ) );
 
 			if ( is_a( $response, 'WP_Error') ) {
 				return $response;
@@ -146,7 +155,9 @@ class GHPS_Search {
 	 * @param object $args WordPress Plugin API arguments.
 	 */
 	public function search_repositories( $args ) {
-		$search_string = $args->search . ' wordpress in:name,description,readme language:php fork:false';
+		$stars = apply_filters( 'ghps_minimum_star_count', $this->minimum_star_count );
+
+		$search_string = $args->search . ' wordpress in:name,description,readme language:php fork:false stars:>' . $stars;
 
 		$response = $this->search_query( $search_string, 'repo' );
 
