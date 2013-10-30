@@ -33,7 +33,7 @@ class GHPS_Search {
 	 * Instantiate the class. Add hooks.
 	 */
 	public function __construct() {
-		add_filter( 'plugins_api_result', array( $this, 'plugins_api_result' ), 10, 3 );
+		add_filter( 'plugins_api', array( $this, 'plugins_api' ), 10, 3 );
 
 		add_filter( 'ghps_http_request_args', array( $this, 'maybe_authenticate_http' ) );
 	}
@@ -52,20 +52,20 @@ class GHPS_Search {
 	}
 
 	/**
-	 * Filter WordPress plugins API search result
+	 * Override WordPress plugin search
 	 * 
-	 * @param object|WP_Error  $wp_response    Response object or WP_Error.
-	 * @param string           $action The type of information being requested from the Plugin Install API.
-	 * @param object           $args   Plugin API arguments.
+	 * @param bool|object         The result object. Default is false.
+	 * @param string      $action The type of information being requested from the Plugin Install API.
+	 * @param object      $args   Plugin API arguments.
 	 * 
-	 * @return object|WP_Error $wp_response    Response object or WP_Error.
+	 * @return object|bool plugins_api response object on success, WP_Error on failure.
 	 */
-	public function plugins_api_result( $wp_response, $action, $args ) {
+	public function plugins_api( $false, $action, $args ) {
 		// Prevent filter from effecting installs & upgrades
 		if ( 'query_plugins' !== $action ) {
-			return $wp_response;
+			return $false;
 		}
-		FB::log($args, '$args');
+
 		$git_response = $this->search( $args );
 
 		if ( is_a( $git_response, 'WP_Error') || false === $git_response ) {
