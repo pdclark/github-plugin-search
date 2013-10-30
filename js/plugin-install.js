@@ -20,7 +20,7 @@
 		}
 
 		// Add Authors column
-		$table.find('thead tr th:first').after( '<th id="author" class="manage-column column-author">Author</th>' );
+		$table.find('thead,tfoot').find('tr th:first').after( '<th id="author" class="manage-column column-author">Author</th>' );
 
 		$rows = $table.find( 'tbody tr' );
 		var plugin;
