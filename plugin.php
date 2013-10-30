@@ -12,6 +12,12 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 */
 
 /**
+ * Used for script cache busting.
+ * @var string Version of this plugin.
+ */
+define( 'GHPS_PLUGIN_VERSION', '0.2' );
+
+/**
  * Used for localization text-domain, which must match wp.org slug.
  * Used for wp-admin settings page slug.
  * 
