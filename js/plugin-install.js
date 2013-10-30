@@ -13,7 +13,10 @@
 
 		for (var i = 0; i < ghps.plugins.length; i++) {
 			url = ghps.plugins[i].slug;
-			$( $links.get( i ) ).attr('href', url).attr('target', '_blank').removeClass('thickbox');
+			$( $links.get( i ) )
+				.attr('href', url).attr('target', '_blank')
+				.text('View on GitHub')
+				.removeClass('thickbox');
 		}
 
 		// Add Authors column
