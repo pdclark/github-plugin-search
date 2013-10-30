@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Manage Github search API.
+ */
 class GHPS_Search {
 
 	/**

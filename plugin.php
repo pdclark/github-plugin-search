@@ -38,8 +38,8 @@ define( 'GHPS_PLUGIN_FILE', __FILE__ );
 define( 'GHPS_PLUGIN_DIR', dirname( __FILE__ ) );
 
 /**
- * Load plugin dependencies and instantiate the plugin.
- * Checks PHP version. Deactivates plugin and links to instructions if running PHP 4.
+ * Loads plugin dependencies and instantiate the plugin.
+ * Deactivates plugin and links to instructions if running PHP 4.
  */
 function storm_github_plugin_search_init() {
 	

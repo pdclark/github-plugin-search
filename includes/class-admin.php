@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Plugin admin methods.
+ * Manage settings page and other WordPress admin user interface.
  */
 class GHPS_Admin {
 

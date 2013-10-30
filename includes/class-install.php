@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Manage plugin installation.
+ */
 class GHPS_Install {
 
 	/**
