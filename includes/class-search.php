@@ -30,12 +30,47 @@ class GHPS_Search {
 	var $minimum_star_count = 5;
 
 	/**
+	 * @var array Response from the Github search API
+	 **/
+	var $git_response;
+
+	/**
 	 * Instantiate the class. Add hooks.
 	 */
 	public function __construct() {
+		add_filter( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
+	
 		add_filter( 'plugins_api', array( $this, 'plugins_api' ), 20, 3 );
 
 		add_filter( 'ghps_http_request_args', array( $this, 'maybe_authenticate_http' ) );
+	}
+
+	/**
+	 * WP_Plugin_Install_List_Table::display_rows() doesn't provide a column filter,
+	 * so we have to edit columns with JavaScript.
+	 * 
+	 * @see http://core.trac.wordpress.org/ticket/25770
+	 */
+	public function admin_enqueue_scripts( $screen ) {
+		if ( 'plugin-install.php' == $screen
+			&& isset( $_GET['tab'] )
+			&& 'search' == $_GET['tab']
+		){
+
+			wp_enqueue_script( 'ghps-plugin-install', plugins_url( 'js/plugin-install.js', GHPS_PLUGIN_FILE ), array('jquery'), GHPS_PLUGIN_VERSION, true );
+
+			// Pass response to JavaScript for editing plugin listing table
+			wp_localize_script( 'ghps-plugin-install', 'GHPSGitResponse', (array) $this->git_response );
+
+			// Too short to merit its own file right now.
+			?>
+			<style>
+				.column-name {min-width: 180px; }
+				.column-author {min-width: 180px;}
+				.column-author img {max-width: 60px; height: auto;}
+			</style>
+			<?php
+		}
 	}
 
 	public function maybe_authenticate_http( $args ) {
@@ -66,15 +101,15 @@ class GHPS_Search {
 			return $false;
 		}
 
-		$git_response = $this->search( $args );
+		$this->git_response = $this->search( $args );
 
-		if ( is_a( $git_response, 'WP_Error') || false === $git_response ) {
-			return $git_response;
+		if ( is_a( $this->git_response, 'WP_Error') || false === $this->git_response ) {
+			return $this->git_response;
 		}
 
-		$git_response = $this->map_git_response_to_wp_response( $git_response );
+		$this->git_response = $this->map_git_response_to_wp_response( $this->git_response );
 
-		return $git_response;
+		return $this->git_response;
 	}
 
 	/**
@@ -231,26 +266,29 @@ class GHPS_Search {
 
 		// Build plugin list
 		foreach ( (array) $git_response->items as $plugin ) {
-			$tmp = new StdClass;
+			$wp_plugin = array(
+				'name'              => $plugin->repository->name,
+				'slug'              => $plugin->repository->html_url,
+				'author'            => $plugin->repository->owner->login,
+				'author_profile'    => $plugin->repository->owner->html_url,
+				'author_gravatar'   => $plugin->repository->owner->avatar_url,
+				'homepage'          => $plugin->html_url,
+				'description'       => $plugin->repository->description,
+				'short_description' => $plugin->repository->description,
 
-			$tmp->name              = $plugin->repository->name;
-			$tmp->slug              = $plugin->repository->html_url;
-			$tmp->author            = $plugin->repository->owner->login;
-			$tmp->author_profile    = $plugin->repository->owner->html_url;
-			$tmp->homepage          = $plugin->html_url;
-			$tmp->description       = $plugin->repository->description;
-			$tmp->short_description = $plugin->repository->description;
+				'version'           => 'Github',
+				'contributors'      => array(), // See $plugin->collaborators_url
+				'requires'          => null,
+				'tested'            => null,
+				'compatibility'     => array(),
+				'rating'            => null,
+				'num_ratings'       => null,
 
-			$tmp->version           = 'Github';
-			$tmp->contributors      = array(); // See $plugin->collaborators_url
-			$tmp->requires          = null;
-			$tmp->tested            = null;
-			$tmp->compatibility     = array();
-			$tmp->rating            = null;
-			$tmp->num_ratings       = null;
+				''
+			);
 
 
-			$plugins[] = $tmp;
+			$plugins[] = (object) $wp_plugin;
 		}
 
 		$wp_response->plugins = $plugins;
