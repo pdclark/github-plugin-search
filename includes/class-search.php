@@ -65,8 +65,8 @@ class GHPS_Search {
 			// Too short to merit its own file right now.
 			?>
 			<style>
-				.column-name {min-width: 200px; }
-				.column-author {min-width: 200px;}
+				.column-name {min-width: 180px; }
+				.column-author {min-width: 180px;}
 				.column-author img {max-width: 60px; height: auto;}
 			</style>
 			<?php
