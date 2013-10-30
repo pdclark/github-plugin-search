@@ -4,7 +4,7 @@
 Plugin Name: Github Plugin Search
 Plugin URI: http://github.com/brainstormmedia/github-plugin-search
 Description: Search and install WordPress plugins from Github.
-Version: 0.2
+Version: 0.3
 Author: Brainstorm Media
 Author URI: http://brainstormmedia.com/
 License: GPLv2
@@ -15,7 +15,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
  * Used for script cache busting.
  * @var string Version of this plugin.
  */
-define( 'GHPS_PLUGIN_VERSION', '0.2' );
+define( 'GHPS_PLUGIN_VERSION', '0.3' );
 
 /**
  * Used for localization text-domain, which must match wp.org slug.
