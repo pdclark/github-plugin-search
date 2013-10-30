@@ -60,7 +60,16 @@ class GHPS_Search {
 			wp_enqueue_script( 'ghps-plugin-install', plugins_url( 'js/plugin-install.js', GHPS_PLUGIN_FILE ), array('jquery'), GHPS_PLUGIN_VERSION, true );
 
 			// Pass response to JavaScript for editing plugin listing table
-			wp_localize_script( 'ghps-plugin-install', 'GHPSGitResponse', (array)$this->git_response );
+			wp_localize_script( 'ghps-plugin-install', 'GHPSGitResponse', (array) $this->git_response );
+
+			// Too short to merit its own file right now.
+			?>
+			<style>
+				.column-name {min-width: 200px; }
+				.column-author {min-width: 200px;}
+				.column-author img {max-width: 60px; height: auto;}
+			</style>
+			<?php
 		}
 	}
 
@@ -262,6 +271,7 @@ class GHPS_Search {
 				'slug'              => $plugin->repository->html_url,
 				'author'            => $plugin->repository->owner->login,
 				'author_profile'    => $plugin->repository->owner->html_url,
+				'author_gravatar'   => $plugin->repository->owner->avatar_url,
 				'homepage'          => $plugin->html_url,
 				'description'       => $plugin->repository->description,
 				'short_description' => $plugin->repository->description,
@@ -273,6 +283,8 @@ class GHPS_Search {
 				'compatibility'     => array(),
 				'rating'            => null,
 				'num_ratings'       => null,
+
+				''
 			);
 
 
