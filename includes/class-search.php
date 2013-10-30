@@ -146,7 +146,7 @@ class GHPS_Search {
 	 * @param object $args WordPress Plugin API arguments.
 	 */
 	public function search_repositories( $args ) {
-		$search_string = $args->search . ' wordpress in:name,description,readme fork:false';
+		$search_string = $args->search . ' wordpress in:name,description,readme language:php fork:false';
 
 		$response = $this->search_query( $search_string, 'repo' );
 
@@ -161,7 +161,7 @@ class GHPS_Search {
 	public function search_plugins( $repos ) {
 		// Github search queries all words individually whether we use quotes or not.
 		// e.g., "Plugin Description" is the same as Plugin Description
-		$search_string = 'plugin name extension:php in:file ' . $repos;
+		$search_string = '"Plugin Name" AND "Plugin URI" extension:php in:file ' . $repos;
 
 		$response = $this->search_query( $search_string, 'code' );
 
