@@ -1,12 +1,11 @@
 <?php
-
 /*
 Plugin Name: Github Plugin Search
-Plugin URI: http://github.com/brainstormmedia/github-plugin-search
+Plugin URI: http://github.com/10up/github-plugin-search
 Description: Search and install WordPress plugins from Github.
 Version: 0.3
-Author: Brainstorm Media
-Author URI: http://brainstormmedia.com/
+Author: Paul Clark, 10up
+Author URI: http://pdclark.com
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 */
